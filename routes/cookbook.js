@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const fs = require("fs");
 const bookmarkedRecipes = "./storage/user/cookbook.json";
+const cookbook = JSON.parse(fs.readFileSync(bookmarkedRecipes));
 
 // router.get("/", (req, res) => {
 //   res.status(200).json({ message: "Welcome to your cookbook." });
@@ -41,7 +42,6 @@ router.get("/", (req, res) => {
 
 // BOOKMARK RECIPE
 router.post("/", (req, res) => {
-  const cookbook = JSON.parse(fs.readFileSync(bookmarkedRecipes));
   const recipeId = req.body.id;
   const recipeTitle = req.body.title;
   const recipeAuthor = req.body.sourceName;
@@ -56,7 +56,6 @@ router.post("/", (req, res) => {
 
   //CHECK IF THE RECIPE ALREADY EXISTS
   const recipeCheck = cookbook.find((recipe) => recipe.id === recipeId);
-  console.log(recipeCheck);
   //if it does, return a response that it exists
   if (recipeCheck) {
     return res.status(409).json({
@@ -64,6 +63,7 @@ router.post("/", (req, res) => {
       message: `${recipeTitle} already exists in your cookbook`,
     });
   }
+
   cookbook.push(recipeInfo);
 
   fs.writeFile(bookmarkedRecipes, JSON.stringify(cookbook), (err) => {
@@ -81,5 +81,29 @@ router.post("/", (req, res) => {
 });
 
 // REMOVE BOOKMARKED RECIPE
+router.delete("/:id", (req, res) => {
+  const recipeId = req.params.id;
+  const targetRecipe = cookbook.find((recipe) => recipe.id === recipeId);
+  console.log(targetRecipe);
+  const recipeTitle = targetRecipe.title;
 
+  if (targetRecipe === -1) {
+    return res.status(404).json({ message: "This recipe doesn't exist" });
+  }
+
+  cookbook.pop(targetRecipe);
+  fs.writeFile(bookmarkedRecipes, JSON.stringify(cookbook), (err) => {
+    if (err) {
+      return res
+        .status(500)
+        .json({ error: true, message: "Could not update records" });
+    }
+
+    return res.status(401).json({
+      error: false,
+      message: "Recipe removed",
+      title: recipeTitle,
+    });
+  });
+});
 module.exports = router;
