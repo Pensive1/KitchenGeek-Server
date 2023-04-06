@@ -3,23 +3,10 @@ const fs = require("fs");
 const bookmarkedRecipes = "./storage/user/cookbook.json";
 const cookbook = JSON.parse(fs.readFileSync(bookmarkedRecipes));
 
-// router.get("/", (req, res) => {
-//   res.status(200).json({ message: "Welcome to your cookbook." });
-// });
-
 // GET (USER) BOOKMARKED RECIPES
 router.get("/", (req, res) => {
   fs.readFile(bookmarkedRecipes, null, (err, data) => {
     if (err) {
-      //if file doesn't exist
-      //   if (err.code === "ENOENT") {
-      //     //Create file
-      //     fs.writeFile(bookmarkedRecipes, JSON.stringify([{}]), (err) => {
-      //       return res
-      //         .status(200)
-      //         .json({ error: false, message: "Cookbook empty" });
-      //     });
-      //   }
       return res.status(500).json({
         error: true,
         message: "Could not read recipes from JSON file",
@@ -38,6 +25,21 @@ router.get("/", (req, res) => {
       })
     );
   });
+});
+
+// CHECK IF BOOKMARK EXISTS
+router.get("/:id", (req, res) => {
+  const recipeId = Number(req.params.id);
+  const targetRecipe = cookbook.find((recipe) => recipe.id === recipeId);
+
+  if (targetRecipe) {
+    return res.status(200).json({ error: false, message: "Recipe exists" });
+  }
+  if (!targetRecipe) {
+    return res
+      .status(200) //usually would be 404 but the error isn't cause for concern. The client will know it's missing via the "error:true" property.
+      .json({ error: true, message: "Recipe doesn't exist" });
+  }
 });
 
 // BOOKMARK RECIPE
@@ -82,10 +84,10 @@ router.post("/", (req, res) => {
 
 // REMOVE BOOKMARKED RECIPE
 router.delete("/:id", (req, res) => {
-  const recipeId = req.params.id;
+  const recipeId = Number(req.params.id);
   const targetRecipe = cookbook.find((recipe) => recipe.id === recipeId);
   console.log(targetRecipe);
-  const recipeTitle = targetRecipe.title;
+  const recipeTitle = targetRecipe ? targetRecipe.title : null;
 
   if (targetRecipe === -1) {
     return res.status(404).json({ message: "This recipe doesn't exist" });
@@ -99,7 +101,7 @@ router.delete("/:id", (req, res) => {
         .json({ error: true, message: "Could not update records" });
     }
 
-    return res.status(401).json({
+    return res.status(200).json({
       error: false,
       message: "Recipe removed",
       title: recipeTitle,

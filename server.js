@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const cors = require("cors");
 const app = express();
 const port = 8080;
 
@@ -8,6 +9,7 @@ const cookbookRoutes = require("./routes/cookbook");
 const shoppingListRoutes = require("./routes/shoppingList");
 
 app.use(express.json());
+app.use(cors({ origin: "http://localhost:3000" }));
 app.use("/api/user/", userRoutes);
 app.use("/api/user/:id/recipes", cookbookRoutes);
 app.use("/api/user/:id/shopping", shoppingListRoutes);
