@@ -21,6 +21,7 @@ router.get("/", (req, res) => {
           title: recipe.title,
           sourceName: recipe.sourceName,
           image: recipe.image,
+          timestamp: recipe.timestamp,
         };
       })
     );
@@ -54,6 +55,7 @@ router.post("/", (req, res) => {
     title: recipeTitle,
     sourceName: recipeAuthor,
     image: recipeImage,
+    timestamp: Date.now(),
   };
 
   //CHECK IF THE RECIPE ALREADY EXISTS
@@ -85,15 +87,15 @@ router.post("/", (req, res) => {
 // REMOVE BOOKMARKED RECIPE
 router.delete("/:id", (req, res) => {
   const recipeId = Number(req.params.id);
-  const targetRecipe = cookbook.find((recipe) => recipe.id === recipeId);
+  const targetRecipe = cookbook.findIndex((recipe) => recipe.id === recipeId);
   console.log(targetRecipe);
-  const recipeTitle = targetRecipe ? targetRecipe.title : null;
+  const recipeTitle = targetRecipe ? cookbook[targetRecipe].title : null;
 
   if (targetRecipe === -1) {
     return res.status(404).json({ message: "This recipe doesn't exist" });
   }
 
-  cookbook.pop(targetRecipe);
+  cookbook.pop(cookbook[targetRecipe]);
   fs.writeFile(bookmarkedRecipes, JSON.stringify(cookbook), (err) => {
     if (err) {
       return res
