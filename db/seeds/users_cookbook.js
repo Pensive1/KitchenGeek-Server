@@ -1,0 +1,69 @@
+const fs = require("fs");
+const sampleUsers = JSON.parse(fs.readFileSync("./data/sample_users.json"));
+const sampleBookmarks = JSON.parse(
+  fs.readFileSync("./data/sample_bookmarks.json")
+);
+
+// const sampleBookmarks = [
+//   {
+//     id: 1,
+//     user_id: 1,
+//     recipe_id: 639644,
+//     recipe_title: "Classic Vanilla-Orange Sugar Cookies",
+//     recipe_author: "Foodista",
+//     recipe_image: "https://spoonacular.com/recipeImages/639644-556x370.jpg",
+//   },
+//   {
+//     id: 2,
+//     user_id: 1,
+//     recipe_id: 41318,
+//     recipe_title: "Savory Carrot Bread",
+//     recipe_author: "Food52",
+//     recipe_image: "https://spoonacular.com/recipeImages/41318-312x231.jpg",
+//   },
+//   {
+//     id: 3,
+//     user_id: 1,
+//     recipe_id: 1087818,
+//     recipe_title: "Smoky spiced Jollof rice & coconut-fried plantain",
+//     recipe_author: "BBC Good Food",
+//     recipe_image: "https://spoonacular.com/recipeImages/1087818-312x231.jpg",
+//   },
+//   {
+//     id: 4,
+//     user_id: 1,
+//     recipe_id: 481777,
+//     recipe_title: "Whole Roasted Harissa Chicken",
+//     recipe_author: "Feasting at Home",
+//     recipe_image: "https://spoonacular.com/recipeImages/481777-556x370.jpg",
+//   },
+//   {
+//     id: 5,
+//     user_id: 1,
+//     recipe_id: 701811,
+//     recipe_title: "Chocolate and hazelnut cake (Torta gianduia)",
+//     recipe_author: "bbc.co.uk",
+//     recipe_image: "https://spoonacular.com/recipeImages/701811-556x370.jpg",
+//   },
+//   {
+//     id: 6,
+//     user_id: 1,
+//     recipe_id: 665257,
+//     recipe_title: "Whole Grain Pumpkin Bread",
+//     recipe_author: "foodista.com",
+//     recipe_image: "https://spoonacular.com/recipeImages/665257-556x370.jpg",
+//   },
+// ];
+
+/**
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
+exports.seed = async function (knex) {
+  // Deletes ALL existing entries
+  await knex("users").del();
+  await knex("users").insert(sampleUsers);
+  await knex("recipe_bookmarks").del();
+  await knex("recipe_bookmarks").insert(sampleBookmarks);
+  // console.log(sampleBookmarks);
+};

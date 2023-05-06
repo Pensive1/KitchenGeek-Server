@@ -1,7 +1,8 @@
 const express = require("express");
+const app = express();
+const knex = require("knex")(require("./knexfile.js"));
 const router = express.Router();
 const cors = require("cors");
-const app = express();
 const port = 8080;
 
 const userRoutes = require("./routes/users");
