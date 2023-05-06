@@ -1,31 +1,21 @@
 const router = require("express").Router();
 const fs = require("fs");
+// const { default: knex } = require("knex");
+const knex = require("knex")(require("../knexfile.js"));
 const bookmarkedRecipes = "./storage/user/cookbook.json";
 const cookbook = JSON.parse(fs.readFileSync(bookmarkedRecipes));
 
 // GET (USER) BOOKMARKED RECIPES
 router.get("/", (req, res) => {
-  fs.readFile(bookmarkedRecipes, null, (err, data) => {
-    if (err) {
-      return res.status(500).json({
-        error: true,
-        message: "Could not read recipes from JSON file",
-      });
-    }
-
-    const recipes = JSON.parse(data);
-    res.status(200).json(
-      recipes.map((recipe) => {
-        return {
-          id: recipe.id,
-          title: recipe.title,
-          sourceName: recipe.sourceName,
-          image: recipe.image,
-          timestamp: recipe.timestamp,
-        };
-      })
-    );
-  });
+  knex
+    .select("*")
+    .from("recipe_bookmarks")
+    .then((data) => {
+      res.json(data);
+    })
+    .catch((err) => {
+      res.status(500).send("Error getting bookmarks");
+    });
 });
 
 // CHECK IF BOOKMARK EXISTS
