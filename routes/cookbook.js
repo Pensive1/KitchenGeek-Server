@@ -94,28 +94,6 @@ router.post("/", (req, res) => {
 // REMOVE BOOKMARKED RECIPE
 router.delete("/:id", (req, res) => {
   const recipeId = Number(req.params.id);
-  // const targetRecipe = cookbook.findIndex((recipe) => recipe.id === recipeId);
-  // console.log(targetRecipe);
-  // const recipeTitle = targetRecipe ? cookbook[targetRecipe].title : null;
-
-  // if (targetRecipe === -1) {
-  //   return res.status(404).json({ message: "This recipe doesn't exist" });
-  // }
-
-  // cookbook.pop(cookbook[targetRecipe]);
-  // fs.writeFile(bookmarkedRecipes, JSON.stringify(cookbook), (err) => {
-  //   if (err) {
-  //     return res
-  //       .status(500)
-  //       .json({ error: true, message: "Could not update records" });
-  //   }
-
-  //   return res.status(200).json({
-  //     error: false,
-  //     message: "Recipe removed",
-  //     title: recipeTitle,
-  //   });
-  // });
 
   bookmarkCheck(userId, recipeId)
     .then((result) => {
@@ -125,7 +103,7 @@ router.delete("/:id", (req, res) => {
           .andWhere("recipe_id", recipeId)
           .del()
           .then((data) => {
-            return res.status(204).json({
+            return res.status(200).json({
               error: false,
               message: "Recipe removed",
             });
@@ -142,4 +120,5 @@ router.delete("/:id", (req, res) => {
       });
     });
 });
+
 module.exports = router;
