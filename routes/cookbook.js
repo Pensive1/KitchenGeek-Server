@@ -6,28 +6,22 @@ const bookmarkedRecipes = "./storage/user/cookbook.json";
 const cookbook = JSON.parse(fs.readFileSync(bookmarkedRecipes));
 
 const bookmarkCheck = (userId, recipeId) => {
-  return knex
+  return knex("recipe_bookmarks")
     .select("*")
     .from("recipe_bookmarks")
     .where("user_id", userId)
     .andWhere("recipe_id", recipeId)
     .then((data) => {
-      if (data.length > 0) {
-        return true;
-      } else {
-        return false;
-      }
+      return data.length > 0;
     })
     .catch((err) => {
-      throw err;
+      return Promise.reject(err);
     });
 };
 
 // GET (USER) BOOKMARKED RECIPES
 router.get("/", (req, res) => {
-  knex
-    .select("*")
-    .from("recipe_bookmarks")
+  knex("recipe_bookmarks")
     .where("user_id", 1) // <-- Refactor for OAuth
     .then((data) => {
       res.json(data);
@@ -60,43 +54,45 @@ router.get("/:id", (req, res) => {
 
 // BOOKMARK RECIPE
 router.post("/", (req, res) => {
-  const recipeId = req.body.id;
-  const recipeTitle = req.body.title;
-  const recipeAuthor = req.body.sourceName;
-  const recipeImage = req.body.image;
+  const userId = 1; // <-- Refactor "1" as user id param
+  const recipeId = req.body.recipe_id; // <-- Double check the request data in the client. Match this with it
+  const recipeTitle = req.body.recipe_title;
+  const recipeAuthor = req.body.recipe_author;
+  const recipeImage = req.body.recipe_image;
 
-  const recipeInfo = {
-    id: recipeId,
-    title: recipeTitle,
-    sourceName: recipeAuthor,
-    image: recipeImage,
-    timestamp: Date.now(),
+  const bookmarkInfo = {
+    user_id: userId,
+    recipe_id: recipeId,
+    recipe_title: recipeTitle,
+    recipe_author: recipeAuthor,
+    recipe_image: recipeImage,
   };
 
-  //CHECK IF THE RECIPE ALREADY EXISTS
-  const recipeCheck = cookbook.find((recipe) => recipe.id === recipeId);
-  //if it does, return a response that it exists
-  if (recipeCheck) {
-    return res.status(409).json({
-      error: true,
-      message: `${recipeTitle} already exists in your cookbook`,
-    });
-  }
-
-  cookbook.push(recipeInfo);
-
-  fs.writeFile(bookmarkedRecipes, JSON.stringify(cookbook), (err) => {
-    if (err) {
+  bookmarkCheck(userId, recipeId)
+    .then((result) => {
+      if (result) {
+        return res.status(409).json({
+          error: true,
+          message: `${recipeTitle} already exists in your cookbook`,
+        });
+      } else {
+        return knex("recipe_bookmarks")
+          .insert(bookmarkInfo)
+          .then((data) => {
+            return res.status(201).json({
+              error: false,
+              message: `${recipeTitle} saved successfully`,
+            });
+          });
+      }
+    })
+    .catch((err) => {
+      console.error(err);
       return res.status(500).json({
         error: true,
-        message: `Could not store ${recipeTitle}`,
+        message: `Error storing ${recipeTitle}: ${err.message}`,
       });
-    }
-    return res.status(201).json({
-      error: false,
-      message: `${recipeTitle} saved successfully`,
     });
-  });
 });
 
 // REMOVE BOOKMARKED RECIPE
