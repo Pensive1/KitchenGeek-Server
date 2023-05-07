@@ -5,11 +5,30 @@ const knex = require("knex")(require("../knexfile.js"));
 const bookmarkedRecipes = "./storage/user/cookbook.json";
 const cookbook = JSON.parse(fs.readFileSync(bookmarkedRecipes));
 
+const bookmarkCheck = (userId, recipeId) => {
+  return knex
+    .select("*")
+    .from("recipe_bookmarks")
+    .where("user_id", userId)
+    .andWhere("recipe_id", recipeId)
+    .then((data) => {
+      if (data.length > 0) {
+        return true;
+      } else {
+        return false;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
 // GET (USER) BOOKMARKED RECIPES
 router.get("/", (req, res) => {
   knex
     .select("*")
     .from("recipe_bookmarks")
+    .where("user_id", 1) // <-- Refactor for OAuth
     .then((data) => {
       res.json(data);
     })
@@ -21,16 +40,22 @@ router.get("/", (req, res) => {
 // CHECK IF BOOKMARK EXISTS
 router.get("/:id", (req, res) => {
   const recipeId = Number(req.params.id);
-  const targetRecipe = cookbook.find((recipe) => recipe.id === recipeId);
 
-  if (targetRecipe) {
-    return res.status(200).json({ error: false, message: "Recipe exists" });
-  }
-  if (!targetRecipe) {
-    return res
-      .status(200) //usually would be 404 but the error isn't cause for concern. The client will know it's missing via the "error:true" property.
-      .json({ error: true, message: "Recipe doesn't exist" });
-  }
+  bookmarkCheck(1, recipeId) // <-- Refactor "1" as user id
+    .then((result) => {
+      if (result) {
+        return res
+          .status(200)
+          .json({ error: false, message: "Recipe is bookmarked" });
+      } else {
+        return res
+          .status(200)
+          .json({ error: true, message: "Recipe isn't bookmarked" });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send("Error getting bookmarks");
+    });
 });
 
 // BOOKMARK RECIPE
