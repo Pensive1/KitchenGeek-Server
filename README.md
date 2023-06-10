@@ -45,4 +45,4 @@ This server allows the Kitchen Geek client to store, read, delete and check for 
 
 ### Client
 
-Head back to the [client repo](https://github.com/Pensive1/KitchenGeek) to continue installation.
+Head back to the [client repo](https://github.com/Pensive1/KitchenGeek#installation) to continue installation.

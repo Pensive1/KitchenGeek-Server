@@ -4,9 +4,13 @@
  */
 exports.up = function (knex) {
   return knex.schema.createTable("users", function (table) {
-    table.increments("id");
+    table.increments("id").primary();
     table.string("firstname").notNullable();
     table.string("surname").notNullable();
+    table.string("email").notNullable();
+    table.string("google_id").nullable();
+    table.string("avatar_url").nullable();
+    table.timestamp("updated_at").defaultTo(knex.fn.now());
   });
 };
 

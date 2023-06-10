@@ -2,11 +2,13 @@
   {
     "id": 1,
     "firstname": "Richard",
-    "surname": "Acquaye"
+    "surname": "Acquaye",
+    "email": "riacharda@msn.com"
   },
   {
     "id": 2,
     "firstname": "Joe",
-    "surname": "Di Trolio"
+    "surname": "Di Trolio",
+    "email": "jditrolio@brainstation.com"
   }
 ]
