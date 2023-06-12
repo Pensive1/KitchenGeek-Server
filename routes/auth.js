@@ -3,14 +3,11 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const knex = require("knex")(require("../knexfile.js"));
 
-// router.get("/login", function (req, res, next) {
-//   res.render("login");
-// });
-
 router.get("/", (req, res) => {
   res.send("Authentication happens here");
 });
 
+// Google OAuth 2.0
 passport.use(
   new GoogleStrategy(
     {
@@ -49,8 +46,6 @@ passport.use(
         .catch((err) => {
           console.log("Error fetching a user", err);
         });
-
-      // return cb(user);
     }
   )
 );
@@ -64,10 +59,10 @@ passport.deserializeUser((user, done) => {
 
   // Query user information from the database for currently authenticated user
   knex("users")
-    .where({ id: userId })
+    .where({ id: user.id })
     .then((user) => {
       // Remember that knex will return an array of records, so we need to get a single record from it
-      console.log("req.user:", user[0]);
+      //   console.log("req.user:", user[0]);
 
       // The full user object will be attached to request object as `req.user`
       done(null, user[0]);
