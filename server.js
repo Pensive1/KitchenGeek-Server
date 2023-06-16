@@ -1,28 +1,29 @@
 const express = require("express");
-const app = express();
 const session = require("express-session");
-const bodyParser = require("body-parser");
 const cors = require("cors");
-require("dotenv").config();
-const port = process.env.PORT || 8080;
+const bodyParser = require("body-parser");
 
-const passport = require("passport");
 const helmet = require("helmet");
-const authRoutes = require("./routes/auth");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const knex = require("knex")(require("./knexfile.js"));
 
+//Additional routes
 const cookbookRoutes = require("./routes/cookbook");
 const shoppingListRoutes = require("./routes/shoppingList");
 
 // Middleware
+const app = express();
+const port = process.env.PORT || 8080;
+require("dotenv").config();
 app.use(express.json());
+app.use(helmet());
 app.use(
   cors({
     origin: true,
     credentials: true,
   })
 );
-app.use(helmet());
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -30,13 +31,83 @@ app.use(
     saveUninitialized: true,
   })
 );
-app.use(passport.authenticate("session"));
 app.use(bodyParser.urlencoded({ extended: false }));
+
+// =========== Passport Config ============
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(passport.authenticate("session"));
+
+// Google OAuth 2.0 Strategy
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    },
+    function (accessToken, refreshToken, profile, done) {
+      // First let's check if we already have this user in our DB
+      knex("users")
+        .select("id")
+        .where({ google_id: profile.id })
+        .then((user) => {
+          if (user.length) {
+            // If user is found, pass the user object to serialize function
+            done(null, user[0]);
+          } else {
+            // If user isn't found, we create a record
+            knex("users")
+              .insert({
+                firstname: profile.name.givenName,
+                surname: profile.name.familyName,
+                email: profile._json.email,
+                google_id: String(profile.id),
+                avatar_url: profile._json.picture,
+              })
+              .then((userId) => {
+                // Pass the user object to serialize function
+                done(null, { id: userId[0] });
+              })
+              .catch((err) => {
+                console.log("Error creating a user", err);
+              });
+          }
+        })
+        .catch((err) => {
+          console.log("Error fetching a user", err);
+        });
+    }
+  )
+);
+
+// Facebook OAuth 2.0 Strategy
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user, done) => {
+  //   done(null, user);
+
+  // Query user information from the database for currently authenticated user
+  knex("users")
+    .where({ id: user.id })
+    .then((user) => {
+      // Remember that knex will return an array of records, so we need to get a single record from it
+      //   console.log("req.user:", user[0]);
+
+      // The full user object will be attached to request object as `req.user`
+      done(null, user[0]);
+    })
+    .catch((err) => {
+      console.log("Error finding user", err);
+    });
+});
 
 // Routes
-app.use("/auth/", authRoutes);
+const authRoutes = require("./routes/auth");
+app.use("/auth", authRoutes);
 // app.use("/api/user/", userRoutes);
 app.use("/api/user/:id/recipes", cookbookRoutes);
 app.use("/api/shopping", shoppingListRoutes);
@@ -50,64 +121,6 @@ app.get("/", isLoggedIn, (req, res) => {
   res
     .status(200)
     .json(`Welcome ${req.user.firstname}, Ready to geek out in the kitchen`);
-});
-
-//Google Authentication
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["email", "profile"] })
-);
-
-app.get(
-  "/auth/google/redirect",
-  passport.authenticate("google", {
-    successReturnToOrRedirect: "/",
-    failureRedirect: "/auth/failure",
-  })
-);
-
-app.get("/auth/failure", (req, res) => {
-  res.send("Something went wrong. Failed to log in");
-});
-
-//Logout - From code-along
-// app.get("/logout", (req, res, next) => {
-//   req.logout((err) => {
-//     if (err) {
-//       // return next(err);
-//       return res.status(500).json({
-//         message: "Server error, please try again later",
-//         error: err,
-//       });
-//     }
-//     // res.redirect("/");
-//   });
-
-//   req.session.destroy(() => {
-//     res.redirect("/");
-//   });
-//   res.send("You've seccessfully logged out");
-//   // res.redirect(process.env.CLIENT_URL);
-// });
-
-//Logout - From express site
-app.get("/logout", function (req, res, next) {
-  // logout logic
-
-  // clear the user from the session object and save.
-  // this will ensure that re-using the old session id
-  // does not have a logged in user
-  req.session.user = null;
-  req.session.save(function (err) {
-    if (err) next(err);
-
-    // regenerate the session, which is good practice to help
-    // guard against forms of session fixation
-    req.session.regenerate(function (err) {
-      if (err) next(err);
-      res.redirect("/");
-    });
-  });
 });
 
 app.listen(port, () => {

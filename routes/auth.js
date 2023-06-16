@@ -1,75 +1,63 @@
-const router = require("express").Router();
+const express = require("express");
+const router = express.Router();
 const passport = require("passport");
-const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const knex = require("knex")(require("../knexfile.js"));
+require("dotenv").config();
 
 router.get("/", (req, res) => {
   res.send("Authentication happens here");
 });
 
-// Google OAuth 2.0
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    },
-    function (accessToken, refreshToken, profile, done) {
-      // First let's check if we already have this user in our DB
-      knex("users")
-        .select("id")
-        .where({ google_id: profile.id })
-        .then((user) => {
-          if (user.length) {
-            // If user is found, pass the user object to serialize function
-            done(null, user[0]);
-          } else {
-            // If user isn't found, we create a record
-            knex("users")
-              .insert({
-                firstname: profile.name.givenName,
-                surname: profile.name.familyName,
-                email: profile._json.email,
-                google_id: String(profile.id),
-                avatar_url: profile._json.picture,
-              })
-              .then((userId) => {
-                // Pass the user object to serialize function
-                done(null, { id: userId[0] });
-              })
-              .catch((err) => {
-                console.log("Error creating a user", err);
-              });
-          }
-        })
-        .catch((err) => {
-          console.log("Error fetching a user", err);
-        });
-    }
-  )
+//Google Authentication
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["email", "profile"] })
 );
 
-passport.serializeUser((user, done) => {
-  done(null, user);
+router.get(
+  "/google/redirect",
+  passport.authenticate("google", {
+    failureRedirect: `${process.env.CLIENT_URL}/auth-fail`,
+  }),
+  (_req, res) => {
+    res.redirect(process.env.CLIENT_URL);
+  }
+);
+
+// User profile endpoint that requires authentication
+router.get("/profile", (req, res) => {
+  // Passport stores authenticated user information on `req.user` object.
+  // Comes from done function of `deserializeUser`
+
+  // If `req.user` isn't found send back a 401 Unauthorized response
+  if (req.user === undefined)
+    return res.status(401).json({ message: "Unauthorized" });
+
+  // If user is currently authenticated, send back user info
+  res.status(200).json(req.user);
 });
 
-passport.deserializeUser((user, done) => {
-  //   done(null, user);
-
-  // Query user information from the database for currently authenticated user
-  knex("users")
-    .where({ id: user.id })
-    .then((user) => {
-      // Remember that knex will return an array of records, so we need to get a single record from it
-      //   console.log("req.user:", user[0]);
-
-      // The full user object will be attached to request object as `req.user`
-      done(null, user[0]);
-    })
-    .catch((err) => {
-      console.log("Error finding user", err);
-    });
+// Logout - From code-along
+router.get("/logout", (req, res, next) => {
+  req.logout((err) => {
+    if (err) {
+      // return next(err);
+      return res.status(500).json({
+        message: "Server error, please try again later",
+        error: err,
+      });
+    }
+    res.redirect(process.env.CLIENT_URL);
+  });
 });
+
+// Temp endpoint to test auth.
+// Updated client env to http://localhost:8080/auth/success-callback
+// router.get("/success-callback", (req, res) => {
+//   if (req.user) {
+//     res.status(200).json(req.user);
+//   } else {
+//     res.status(401).json({ message: "User is not logged in" });
+//   }
+// });
 
 module.exports = router;
