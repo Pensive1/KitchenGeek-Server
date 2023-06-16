@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
+const authCheck = require("../middleware/authCheck.js");
 require("dotenv").config();
 
 router.get("/", (req, res) => {
@@ -24,7 +25,7 @@ router.get(
 );
 
 // User profile endpoint that requires authentication
-router.get("/profile", (req, res) => {
+router.get("/profile", authCheck, (req, res) => {
   // Passport stores authenticated user information on `req.user` object.
   // Comes from done function of `deserializeUser`
 

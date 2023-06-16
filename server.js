@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const knex = require("knex")(require("./knexfile.js"));
+const authCheck = require("./middleware/authCheck.js");
 
 //Additional routes
 const cookbookRoutes = require("./routes/cookbook");
@@ -14,6 +15,7 @@ const shoppingListRoutes = require("./routes/shoppingList");
 
 // Middleware
 const app = express();
+const crypto = require("crypto");
 const port = process.env.PORT || 8080;
 require("dotenv").config();
 app.use(express.json());
@@ -28,14 +30,23 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    },
+    rolling: true, // Reset session expiry on every request
+    genid: () => {
+      // Generate a unique session ID
+      return crypto.randomBytes(32).toString("hex");
+    },
   })
 );
 app.use(bodyParser.urlencoded({ extended: false }));
 
 // =========== Passport Config ============
-app.use(passport.initialize());
 app.use(passport.session());
+app.use(passport.initialize());
 app.use(passport.authenticate("session"));
 
 // Google OAuth 2.0 Strategy
@@ -46,9 +57,9 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
     },
-    function (accessToken, refreshToken, profile, done) {
+    async function (accessToken, refreshToken, profile, done) {
       // First let's check if we already have this user in our DB
-      knex("users")
+      await knex("users")
         .select("id")
         .where({ google_id: profile.id })
         .then((user) => {
@@ -112,12 +123,7 @@ app.use("/auth", authRoutes);
 app.use("/api/user/:id/recipes", cookbookRoutes);
 app.use("/api/shopping", shoppingListRoutes);
 
-// Logged in middleware
-const isLoggedIn = (req, res, next) => {
-  req.user ? next() : res.sendStatus(401);
-};
-
-app.get("/", isLoggedIn, (req, res) => {
+app.get("/", authCheck, (req, res) => {
   res
     .status(200)
     .json(`Welcome ${req.user.firstname}, Ready to geek out in the kitchen`);
