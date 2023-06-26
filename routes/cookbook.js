@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const knex = require("knex")(require("../knexfile.js"));
+const authCheck = require("../middleware/authCheck.js");
 const userId = 1; // <-- Refactor "1" as user id
 
 const bookmarkCheck = (user_id, recipeId) => {
@@ -18,6 +19,8 @@ const bookmarkCheck = (user_id, recipeId) => {
 
 // GET (USER) BOOKMARKED RECIPES
 router.get("/", (req, res) => {
+  console.log("------ NEW REQUEST ------", req);
+
   knex("recipe_bookmarks")
     .where("user_id", userId) // <-- Refactor for OAuth
     .then((data) => {

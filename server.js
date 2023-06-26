@@ -116,11 +116,11 @@ passport.deserializeUser((user, done) => {
     });
 });
 
-// Routes
+// =========== Routes ===========
 const authRoutes = require("./routes/auth");
 app.use("/auth", authRoutes);
 // app.use("/api/user/", userRoutes);
-app.use("/api/user/:id/recipes", cookbookRoutes);
+app.use("/api/recipes", cookbookRoutes);
 app.use("/api/shopping", shoppingListRoutes);
 
 app.get("/", authCheck, (req, res) => {
