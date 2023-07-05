@@ -1,7 +1,10 @@
+const express = require("express");
 const router = require("express").Router();
 const knex = require("knex")(require("../knexfile.js"));
 const authCheck = require("../middleware/authCheck.js");
 const userId = 1; // <-- Refactor "1" as user id
+
+//TODO: Fetch user id from session. Not working at the moment
 
 const bookmarkCheck = (user_id, recipeId) => {
   return knex("recipe_bookmarks")
@@ -18,11 +21,11 @@ const bookmarkCheck = (user_id, recipeId) => {
 };
 
 // GET (USER) BOOKMARKED RECIPES
-router.get("/", (req, res) => {
+router.get("/", express, authCheck, (req, res) => {
   console.log("------ NEW REQUEST ------", req);
 
   knex("recipe_bookmarks")
-    .where("user_id", userId) // <-- Refactor for OAuth
+    .where("user_id", req.session.passport.user.id) // <-- Refactor for OAuth
     .then((data) => {
       res.json(data);
     })
@@ -34,8 +37,12 @@ router.get("/", (req, res) => {
 // CHECK IF BOOKMARK EXISTS
 router.get("/:id", (req, res) => {
   const recipeId = Number(req.params.id);
+  // const userId = req.session.passport.user.id;
+  console.log("---- API call from cookbook endpoint ----");
+  console.log(req.session);
+  console.log(req);
 
-  bookmarkCheck(userId, recipeId)
+  bookmarkCheck(req.session.passport.user.id, recipeId)
     .then((result) => {
       if (result) {
         return res
@@ -53,21 +60,21 @@ router.get("/:id", (req, res) => {
 });
 
 // BOOKMARK RECIPE
-router.post("/", (req, res) => {
+router.post("/", express, authCheck, (req, res) => {
   const recipeId = req.body.recipe_id; // <-- Double check the request data in the client. Match this with it
   const recipeTitle = req.body.recipe_title;
   const recipeAuthor = req.body.recipe_author;
   const recipeImage = req.body.recipe_image;
 
   const bookmarkInfo = {
-    user_id: userId,
+    user_id: req.session.user.id,
     recipe_id: recipeId,
     recipe_title: recipeTitle,
     recipe_author: recipeAuthor,
     recipe_image: recipeImage,
   };
 
-  bookmarkCheck(userId, recipeId)
+  bookmarkCheck(req.session.user.id, recipeId)
     .then((result) => {
       if (result) {
         return res.status(409).json({
@@ -95,14 +102,14 @@ router.post("/", (req, res) => {
 });
 
 // REMOVE BOOKMARKED RECIPE
-router.delete("/:id", (req, res) => {
+router.delete("/:id", express, authCheck, (req, res) => {
   const recipeId = Number(req.params.id);
 
-  bookmarkCheck(userId, recipeId)
+  bookmarkCheck(req.session.user.id, recipeId)
     .then((result) => {
       if (result) {
         knex("recipe_bookmarks")
-          .where("user_id", userId)
+          .where("user_id", req.session.user.id)
           .andWhere("recipe_id", recipeId)
           .del()
           .then((data) => {

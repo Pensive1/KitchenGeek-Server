@@ -1,17 +1,15 @@
 const express = require("express");
 const session = require("express-session");
+const knex = require("knex")(require("./knexfile.js"));
+const KnexSessionStore = require("connect-session-knex")(session);
+const store = new KnexSessionStore({ knex, createtable: true });
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
 const helmet = require("helmet");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const knex = require("knex")(require("./knexfile.js"));
 const authCheck = require("./middleware/authCheck.js");
-
-//Additional routes
-const cookbookRoutes = require("./routes/cookbook");
-const shoppingListRoutes = require("./routes/shoppingList");
 
 // Middleware
 const app = express();
@@ -19,6 +17,7 @@ const crypto = require("crypto");
 const port = process.env.PORT || 8080;
 require("dotenv").config();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(
   cors({
@@ -35,6 +34,7 @@ app.use(
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       secure: process.env.NODE_ENV === "production", // Use secure cookies in production
     },
+    store: store,
     rolling: true, // Reset session expiry on every request
     genid: () => {
       // Generate a unique session ID
@@ -42,11 +42,10 @@ app.use(
     },
   })
 );
-app.use(bodyParser.urlencoded({ extended: false }));
 
 // =========== Passport Config ============
-app.use(passport.session());
 app.use(passport.initialize());
+app.use(passport.session());
 app.use(passport.authenticate("session"));
 
 // Google OAuth 2.0 Strategy
@@ -94,30 +93,11 @@ passport.use(
 
 // Facebook OAuth 2.0 Strategy
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-  //   done(null, user);
-
-  // Query user information from the database for currently authenticated user
-  knex("users")
-    .where({ id: user.id })
-    .then((user) => {
-      // Remember that knex will return an array of records, so we need to get a single record from it
-      //   console.log("req.user:", user[0]);
-
-      // The full user object will be attached to request object as `req.user`
-      done(null, user[0]);
-    })
-    .catch((err) => {
-      console.log("Error finding user", err);
-    });
-});
-
 // =========== Routes ===========
 const authRoutes = require("./routes/auth");
+const cookbookRoutes = require("./routes/cookbook");
+const shoppingListRoutes = require("./routes/shoppingList");
+
 app.use("/auth", authRoutes);
 // app.use("/api/user/", userRoutes);
 app.use("/api/recipes", cookbookRoutes);
